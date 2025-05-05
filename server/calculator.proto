@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "./gen;gen";
+
+
+package calculator;
+
+message BinaryOpArguments {
+    int32 arg1 = 1;
+    int32 arg2 = 2;
+}
+
+message BinaryOpResult {
+    int32 res = 1;
+}
+
+service Calculator {
+    rpc Add(BinaryOpArguments) returns (BinaryOpResult) {}
+}
