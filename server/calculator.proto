@@ -2,18 +2,85 @@ syntax = "proto3";
 
 option go_package = "./gen;gen";
 
-
 package calculator;
 
-message BinaryOpArguments {
-    int32 arg1 = 1;
-    int32 arg2 = 2;
+
+enum BinaryIntOp {
+    ADDI = 0;
+    SUBI = 1;
+    MULI = 2;
+    DIVI = 3;
+    MODI = 4;
 }
 
-message BinaryOpResult {
-    int32 res = 1;
+message Int {
+    int32 value = 1;
 }
 
-service Calculator {
-    rpc Add(BinaryOpArguments) returns (BinaryOpResult) {}
+message ApplyBinOpArg {
+    BinaryIntOp op = 1;
+    Int arg1 = 2;
+    Int arg2 = 3;
+}
+
+message EvaluateArg {
+    BinaryIntOp op = 1;
+    Int arg = 2;
+}
+
+message FindPrimesArg {
+    Int ub = 1;
+    Int lb = 2;
+}
+
+service IntCalculator {
+    rpc ApplyBinOp(ApplyBinOpArg) returns (Int) {};
+    rpc Evaluate(stream EvaluateArg) returns (stream Int) {};
+    rpc FindPrimes(FindPrimesArg) returns (stream Int) {};
+}
+
+////
+
+message FloatVector {
+    repeated double coeffs = 1;
+}
+
+message Float {
+    double value = 1;
+}
+
+enum AccumulateVecOp {
+    MIN = 0;
+    MAX = 1;
+    ADD = 2;
+    MUL = 3;
+}
+
+message AccumulateVecArg {
+    FloatVector vec = 1;
+    AccumulateVecOp op = 2;
+}
+
+enum MapVecOp {
+    ID = 0;
+    SIN = 1;
+    COS = 2;
+    SQUARE = 3;
+    SQRT = 4;
+}
+
+message MapVecArg {
+    FloatVector vec = 1;
+    MapVecOp op = 2;
+}
+
+message DotArg{
+    FloatVector vec1 = 1;
+    FloatVector vec2 = 2;
+}
+
+service VectorCalculator {
+    rpc AccumulateVec(AccumulateVecArg) returns (Float) {}
+    rpc MapVec(MapVecArg) returns (FloatVector) {}
+    rpc Dot(stream DotArg) returns (stream Float) {}
 }
