@@ -44,15 +44,16 @@ class Global:
     methods = dict()
 
 
-    arguments_dict = dict()
+
+    VARIABLES = dict()
 
 
 def handle_disconnected(cmd: str, args: list[str]):
     match cmd:
         case "conn":
             addr = args[0]
-            channel = grpc.insecure_channel(addr)
-            Global.reflection_db = ProtoReflectionDescriptorDatabase(channel)
+            Global.channel = grpc.insecure_channel(addr)
+            Global.reflection_db = ProtoReflectionDescriptorDatabase(Global.channel)
             Global.desc_pool = descriptor_pool.DescriptorPool(Global.reflection_db)
             Global.state = State.CONNECTED
             Global.services = list(Global.reflection_db.get_services())
@@ -89,31 +90,80 @@ def handle_connected(cmd: str, args: list[str]):
                 filename, alias = args[0], args[1]
                 with open(filename, 'r') as file:
                     data = json.load(file)
-                Global.arguments_dict[alias] = data
+                Global.VARIABLES[alias] = data
             else:
                 print("WRONG!!!")
         case "alias":
             if len(args) == 2:
                 alias, json_val = args[0], args[1]
-                Global.arguments_dict[alias] = json.loads(json_val)
+                print(json_val)
+                Global.VARIABLES[alias] = json.loads(json_val)
             else:
                 print("WRONG!!")
         case "print":
             if len(args) == 0:
-                print(json.dumps(Global.arguments_dict, indent=4))
+                print(json.dumps(Global.VARIABLES, indent=4))
             elif len(args) == 1:
                 alias = args[0]
-                print(json.dumps(Global.arguments_dict[alias], indent=4))
+                print(json.dumps(Global.VARIABLES[alias], indent=4))
             else:
                 print("WRONG!!!")
         case "invoke":
-            pass
-            
+            if len(args) == 2:
+                service_name, method_name = args[0], args[1]
+                full_method_name = create_remote_method(service_name, method_name)
+                #Global.methods[full_method_name]()
+            else:
+                print("WRONG!!!")
 
+  
+def make_input_iterator(input_class):
+    def impl():
+        arg = json.loads('{"vec1": {"coeffs" : [1,2,3]},"vec2": {"coeffs" : [1,1,-1]}}')
+        yield json_format.ParseDict(input_class(), arg)        
+    return impl
+    
+def my_parse(s: str):
+    if s.startswith("$"):
+        return Global.VARIABLES[s[1:]]
+    
+    return json.loads(s)
 
+def create_remote_method(service_name: str, method_name: str):
+    service = Global.desc_pool.FindServiceByName(service_name)
+    method = service.FindMethodByName(method_name)
 
-def handle_remotecall(cmd: str, args: list[str]):
-    pass
+    full_method_name = f"/{service_name}/{method_name}"
+    cs = method.client_streaming
+    ss = method.server_streaming
+    print(full_method_name)
+    print(f"client streaming: {cs}; server streaming: {ss};")
+    if Global.methods.get(full_method_name) is not None:
+        print("cached")
+    else:
+        input_message_class = message_factory.GetMessageClass(method.input_type)
+        output_message_class = message_factory.GetMessageClass(method.output_type)
+        if not cs and not ss:
+            stub_method = Global.channel.unary_unary(
+                full_method_name,
+                request_serializer=lambda msg: msg.SerializeToString(),
+                response_deserializer=lambda resp: output_message_class().FromString(resp))
+            #Global.methods[full_method_name] = stub_method
+            req = my_parse(input("[unary request]>> "))
+            request_message = input_message_class()
+            json_format.ParseDict(req, request_message)
+            resp = stub_method(request_message)
+            print(json_format.MessageToDict(resp))
+            def stub_method_with_input():
+                req = my_parse(input("[unary request]>> "))
+                request_message = input_message_class()
+                json_format.ParseDict(req, request_message)
+                resp = stub_method(req)
+                print(json_format.MessageToDict(resp))
+            Global.methods[full_method_name] = stub_method_with_input
+        else:
+            print("Not implemented!")
+    return full_method_name
 
 
 if __name__ == "__main__":
@@ -127,5 +177,3 @@ if __name__ == "__main__":
             handle_disconnected(cmd, args)
         elif Global.state == State.CONNECTED:
             handle_connected(cmd, args)
-        elif Global.state == State.REMOTECALL:
-            handle_remotecall(cmd, args)
