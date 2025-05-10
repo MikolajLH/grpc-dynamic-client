@@ -92,6 +92,12 @@ def handle_connected(cmd: str, args: list[str]):
                 Global.arguments_dict[alias] = data
             else:
                 print("WRONG!!!")
+        case "alias":
+            if len(args) == 2:
+                alias, json_val = args[0], args[1]
+                Global.arguments_dict[alias] = json.loads(json_val)
+            else:
+                print("WRONG!!")
         case "print":
             if len(args) == 0:
                 print(json.dumps(Global.arguments_dict, indent=4))
@@ -100,6 +106,8 @@ def handle_connected(cmd: str, args: list[str]):
                 print(json.dumps(Global.arguments_dict[alias], indent=4))
             else:
                 print("WRONG!!!")
+        case "invoke":
+            pass
             
 
 
