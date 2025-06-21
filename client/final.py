@@ -27,7 +27,17 @@ def input_loop():
             inp = ""
         yield inp
 
+
+def handle_command(cmd: str, args: list[str]):
+    if cmd == "conn":
+        pass
+
+
+
 if __name__ == "__main__":
     for inp in input_loop():
         if inp is None or inp == "":
             continue
+        
+        cmd, *args = inp.split()
+        handle_command(cmd, args)
