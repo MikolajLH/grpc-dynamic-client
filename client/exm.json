@@ -1,0 +1,8 @@
+{
+    "method": "Evaluate",
+    "args": [
+        {"op": 0, "arg": {"value": 42 } },
+        {"op": 4, "arg": {"value": 9 } },
+        {"op": 3, "arg": {"value": 0} }
+    ]
+}
