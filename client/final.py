@@ -29,9 +29,23 @@ def input_loop():
 
 
 def handle_command(cmd: str, args: list[str]):
-    if cmd == "conn":
-        pass
-
+    match cmd:
+        case "conn":
+            pass
+        case "disc":
+            pass
+        case "list":
+            pass
+        case "info":
+            pass
+        case "alias":
+            pass
+        case "load":
+            pass
+        case "print":
+            pass
+        case "invoke":
+            pass
 
 
 if __name__ == "__main__":
