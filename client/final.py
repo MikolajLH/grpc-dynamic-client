@@ -32,7 +32,7 @@ def handle_command(cmd: str, args: list[str]):
     match cmd:
         case "conn":
             pass
-        case "disc":
+        case "close":
             pass
         case "list":
             pass
