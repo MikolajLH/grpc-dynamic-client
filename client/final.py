@@ -8,6 +8,15 @@ from grpc_reflection.v1alpha.proto_reflection_descriptor_database import ProtoRe
 from google.protobuf import descriptor_pool, message_factory, json_format
 
 
+class Global:
+    channel: None|grpc.Channel = None
+    reflection_db: None|ProtoReflectionDescriptorDatabase = None
+    desc_pool: None|descriptor_pool.DescriptorPool = None
+    services: list[str] = []
+    methods = dict()
+
+    VARIABLES = dict()
+
 def clrscr():
     if platform.system() == "Windows":
         os.system('cls')
