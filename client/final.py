@@ -41,11 +41,14 @@ def handle_command(cmd: str, args: list[str]):
     match cmd:
         case "conn":
             addr = args[0]
-            Global.channel = grpc.insecure_channel(addr)
-            Global.reflection_db = ProtoReflectionDescriptorDatabase(Global.channel)
-            Global.desc_pool = descriptor_pool.DescriptorPool(Global.reflection_db)
-            Global.services = list(Global.reflection_db.get_services())
-            pass
+            if Global.channel is None:
+                Global.channel = grpc.insecure_channel(addr)
+                Global.reflection_db = ProtoReflectionDescriptorDatabase(Global.channel)
+                Global.desc_pool = descriptor_pool.DescriptorPool(Global.reflection_db)
+                Global.services = list(Global.reflection_db.get_services())
+            else:
+                print("Already connected, disconnect first")
+            
         case "close":
             pass
         case "list":
