@@ -76,7 +76,8 @@ def handle_command(cmd: str, args: list[str]):
                 print("can't disconnect if not connected")
 
         case "list":
-            pass
+            for i, service_name in enumerate(Global.services):
+                print(f"[{i}] {service_name}")
         case "info":
             pass
         case "var":
