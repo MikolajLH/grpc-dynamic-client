@@ -33,8 +33,9 @@ def input_loop():
             for part in parts:
                 new_part = part
                 if part.startswith("$"):
-                    if part in Global.VARIABLES:
-                        new_part = Global.VARIABLES[part]
+
+                    if part[1:] in Global.VARIABLES:
+                        new_part = Global.VARIABLES[part[1:]]
                     else:
                         print(f"Warning: There is no saved variable with the name {part}")
                 processed_parts.append(str(new_part))
@@ -80,12 +81,12 @@ def handle_command(cmd: str, args: list[str]):
             pass
         case "var":
             var_name, json_val = args[0], args[1:]
-            Global.VARIABLES[f"${var_name}"] = json.loads("".join(json_val))
+            Global.VARIABLES[var_name] = json.loads("".join(json_val))
         case "loadto":
             filename, alias = args[0], args[1]
             with open(filename, 'r') as file:
                 data = json.load(file)
-                Global.VARIABLES[f"${alias}"] = data
+                Global.VARIABLES[alias] = data
         case "print":
             pass
         case "invoke":
