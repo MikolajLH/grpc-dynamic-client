@@ -46,11 +46,20 @@ def handle_command(cmd: str, args: list[str]):
                 Global.reflection_db = ProtoReflectionDescriptorDatabase(Global.channel)
                 Global.desc_pool = descriptor_pool.DescriptorPool(Global.reflection_db)
                 Global.services = list(Global.reflection_db.get_services())
+                print("connected")
             else:
                 print("Already connected, disconnect first")
             
-        case "close":
-            pass
+        case "disc":
+            if Global.channel is not None:
+                Global.channel = None
+                Global.reflection_db = None
+                Global.desc_pool = None
+                Global.services = []
+                print("disconnected")
+            else:
+                print("can't disconnect if not connected")
+
         case "list":
             pass
         case "info":
