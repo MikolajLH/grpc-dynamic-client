@@ -2,6 +2,7 @@ from enum import Enum
 import os
 import platform
 import json
+import re
 
 import grpc
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import ProtoReflectionDescriptorDatabase
@@ -27,6 +28,19 @@ def input_loop():
     while True:
         try:
             inp = input("[gRPC dyn client]>> ")
+            parts = re.split(r'(\s+)', inp)
+            processed_parts = []
+            for part in parts:
+                new_part = part
+                if part.startswith("$"):
+                    if part in Global.VARIABLES:
+                        new_part = Global.VARIABLES[part]
+                    else:
+                        print(f"Warning: There is no saved variable with the name {part}")
+                processed_parts.append(str(new_part))
+            
+            inp = "".join(processed_parts)
+            print("<<", inp)                
         except (KeyboardInterrupt, EOFError):
             return
         if inp == "exit":
@@ -64,8 +78,9 @@ def handle_command(cmd: str, args: list[str]):
             pass
         case "info":
             pass
-        case "alias":
-            pass
+        case "var":
+            var_name, json_val = args[0], args[1:]
+            Global.VARIABLES[var_name] = json.loads("".join(json_val))
         case "load":
             pass
         case "print":
@@ -78,6 +93,5 @@ if __name__ == "__main__":
     for inp in input_loop():
         if inp is None or inp == "":
             continue
-        
         cmd, *args = inp.split()
         handle_command(cmd, args)
