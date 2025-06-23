@@ -80,9 +80,12 @@ def handle_command(cmd: str, args: list[str]):
             pass
         case "var":
             var_name, json_val = args[0], args[1:]
-            Global.VARIABLES[var_name] = json.loads("".join(json_val))
-        case "load":
-            pass
+            Global.VARIABLES[f"${var_name}"] = json.loads("".join(json_val))
+        case "loadto":
+            filename, alias = args[0], args[1]
+            with open(filename, 'r') as file:
+                data = json.load(file)
+                Global.VARIABLES[f"${alias}"] = data
         case "print":
             pass
         case "invoke":
