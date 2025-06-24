@@ -3,6 +3,8 @@ import os
 import platform
 import json
 import re
+import threading
+import asyncio
 
 import grpc
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import ProtoReflectionDescriptorDatabase
@@ -39,6 +41,26 @@ def call_remote_method(service_name: str, method_name: str):
     service = Global.desc_pool.FindServiceByName(service_name)
     method = service.FindMethodByName(method_name)
 
+    def handle_response_stream(resp_iter):
+        for resp in resp_iter:
+            print(json_format.MessageToDict(resp))
+
+    def handle_request_stream(message_class):
+        while True:
+            inp = parse(input("[(1 -> *) request]>> "))
+            if inp == "!":
+                
+                return
+            try:
+                req = json.loads(inp)
+                rm = message_class()
+                json_format.ParseDict(req, rm)
+                yield rm
+            except Exception as e:
+                print("Exception:", e)
+                return
+            
+
     full_method_name = f"/{service_name}/{method_name}"
     cs = method.client_streaming
     ss = method.server_streaming
@@ -56,10 +78,31 @@ def call_remote_method(service_name: str, method_name: str):
             response_deserializer=lambda resp: output_message_class().FromString(resp))
         resp = stub_method(request_message)
         print(json_format.MessageToDict(resp))
-        pass
+
     elif not cs and ss:
-        pass
+        req = json.loads(parse(input("[(1 -> *) request]>> ")))
+        request_message = input_message_class()
+        json_format.ParseDict(req, request_message)
+        stub_method = Global.channel.unary_stream(
+            full_method_name,
+            request_serializer=lambda msg: msg.SerializeToString(),
+            response_deserializer=lambda resp: output_message_class().FromString(resp))
+        
+        resp_iter = stub_method(request_message)
+        thread = threading.Thread(target=handle_response_stream, args=[resp_iter])
+        thread.start()
+        thread.join()
+
     elif cs and not ss:
+        req = json.loads(parse(input("[(* -> 1) request]>> ")))
+        stub_method = Global.channel.stream_unary(
+            full_method_name,
+            request_serializer=lambda msg: msg.SerializeToString(),
+            response_deserializer=lambda resp: output_message_class().FromString(resp))
+        
+        resp = stub_method(handle_request_stream(input_message_class))
+        print(json_format.MessageToDict(resp))
+    else:
         pass
 
     
