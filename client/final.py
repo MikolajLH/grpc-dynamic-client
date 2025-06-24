@@ -4,7 +4,6 @@ import platform
 import json
 import re
 import threading
-import asyncio
 
 import grpc
 from grpc_reflection.v1alpha.proto_reflection_descriptor_database import ProtoReflectionDescriptorDatabase
@@ -42,12 +41,15 @@ def call_remote_method(service_name: str, method_name: str):
     method = service.FindMethodByName(method_name)
 
     def handle_response_stream(resp_iter):
-        for resp in resp_iter:
-            print(json_format.MessageToDict(resp))
+        try:
+            for resp in resp_iter:
+                print(json_format.MessageToDict(resp))
+        except Exception as e:
+            print("Exception:", e)
 
     def handle_request_stream(message_class):
         while True:
-            inp = parse(input("[(1 -> *) request]>> "))
+            inp = parse(input("[request]>> "))
             if inp == "!":
                 
                 return
@@ -94,7 +96,6 @@ def call_remote_method(service_name: str, method_name: str):
         thread.join()
 
     elif cs and not ss:
-        req = json.loads(parse(input("[(* -> 1) request]>> ")))
         stub_method = Global.channel.stream_unary(
             full_method_name,
             request_serializer=lambda msg: msg.SerializeToString(),
@@ -103,7 +104,15 @@ def call_remote_method(service_name: str, method_name: str):
         resp = stub_method(handle_request_stream(input_message_class))
         print(json_format.MessageToDict(resp))
     else:
-        pass
+        stub_method = Global.channel.stream_stream(
+            full_method_name,
+            request_serializer=lambda msg: msg.SerializeToString(),
+            response_deserializer=lambda resp: output_message_class().FromString(resp))
+        
+        resp_iter = stub_method(handle_request_stream(input_message_class))
+        thread = threading.Thread(target=handle_response_stream, args=[resp_iter])
+        thread.start()
+        thread.join()
 
     
 def parse(text: str) -> str:
