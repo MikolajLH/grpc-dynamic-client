@@ -14,7 +14,6 @@ class Global:
     reflection_db: None|ProtoReflectionDescriptorDatabase = None
     desc_pool: None|descriptor_pool.DescriptorPool = None
     services: list[str] = []
-    methods = dict()
 
     VARIABLES = dict()
 
@@ -24,23 +23,65 @@ def clrscr():
     else:
         os.system('clear')
 
+def print_service_description(service):
+    print(service.full_name)
+    for method_name, method in service.methods_by_name.items():
+        print(f"Method: {method_name}({method.input_type.name}) returns {method.output_type.name}")
+        cs = method.client_streaming
+        ss = method.server_streaming
+        print(f"Client streaming: {cs}; Server streaming: {ss}; ")
+        print()
+
+    print()
+
+
+def call_remote_method(service_name: str, method_name: str):
+    service = Global.desc_pool.FindServiceByName(service_name)
+    method = service.FindMethodByName(method_name)
+
+    full_method_name = f"/{service_name}/{method_name}"
+    cs = method.client_streaming
+    ss = method.server_streaming
+    print(full_method_name)
+    print(f"client streaming: {cs}; server streaming: {ss};")
+    input_message_class = message_factory.GetMessageClass(method.input_type)
+    output_message_class = message_factory.GetMessageClass(method.output_type)
+    if not cs and not ss:
+        req = json.loads(parse(input("[(1 -> 1) request]>> ")))
+        request_message = input_message_class()
+        json_format.ParseDict(req, request_message)
+        stub_method = Global.channel.unary_unary(
+            full_method_name,
+            request_serializer=lambda msg: msg.SerializeToString(),
+            response_deserializer=lambda resp: output_message_class().FromString(resp))
+        resp = stub_method(request_message)
+        print(json_format.MessageToDict(resp))
+        pass
+    elif not cs and ss:
+        pass
+    elif cs and not ss:
+        pass
+
+    
+def parse(text: str) -> str:
+    parts = re.split(r'(\s+)', text)
+    processed_parts = []
+    for part in parts:
+        new_part = part
+        if part.startswith("$"):
+            if part[1:] in Global.VARIABLES:
+                new_part = json.dumps(Global.VARIABLES[part[1:]])
+            else:
+                print(f"Warning: There is no saved variable with the name {part}")
+        processed_parts.append(new_part)
+    
+    return "".join(processed_parts)
+
+
 def input_loop():
     while True:
         try:
-            inp = input("[gRPC dyn client]>> ")
-            parts = re.split(r'(\s+)', inp)
-            processed_parts = []
-            for part in parts:
-                new_part = part
-                if part.startswith("$"):
-
-                    if part[1:] in Global.VARIABLES:
-                        new_part = Global.VARIABLES[part[1:]]
-                    else:
-                        print(f"Warning: There is no saved variable with the name {part}")
-                processed_parts.append(str(new_part))
-            
-            inp = "".join(processed_parts)
+            inp = parse(input("[gRPC dyn client]>> "))
             print("<<", inp)                
         except (KeyboardInterrupt, EOFError):
             return
@@ -78,8 +119,12 @@ def handle_command(cmd: str, args: list[str]):
         case "list":
             for i, service_name in enumerate(Global.services):
                 print(f"[{i}] {service_name}")
+
         case "info":
-            pass
+            index = int(args[0])
+            service_name = Global.services[index]
+            service = Global.desc_pool.FindServiceByName(service_name)
+            print_service_description(service)
         case "var":
             var_name, json_val = args[0], args[1:]
             Global.VARIABLES[var_name] = json.loads("".join(json_val))
@@ -88,10 +133,10 @@ def handle_command(cmd: str, args: list[str]):
             with open(filename, 'r') as file:
                 data = json.load(file)
                 Global.VARIABLES[alias] = data
-        case "print":
-            pass
-        case "invoke":
-            pass
+        case "call":
+            service_name = args[0]
+            method_name = args[1]
+            call_remote_method(service_name, method_name)
 
 
 if __name__ == "__main__":
